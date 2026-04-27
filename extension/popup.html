@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContentStamp</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 360px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #0a0a1a;
+    color: #e8e8f0;
+    padding: 16px;
+  }
+  .header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  }
+  .logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: bold; color: #fff;
+  }
+  .title { font-size: 16px; font-weight: 600; }
+  .subtitle { font-size: 11px; color: #888; }
+  
+  .card {
+    background: #1a1a2e; border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 12px; margin-bottom: 12px;
+  }
+  .card-title { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .card-value { font-size: 13px; word-break: break-all; color: #ccc; }
+  
+  .btn {
+    width: 100%; padding: 12px; border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-stamp {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: #fff; margin-bottom: 8px;
+  }
+  .btn-stamp:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-stamp:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-link {
+    background: rgba(99,102,241,0.1); color: #818cf8;
+    border: 1px solid rgba(99,102,241,0.2);
+  }
+  .btn-link:hover { background: rgba(99,102,241,0.2); }
+  
+  .status {
+    padding: 10px; border-radius: 8px; margin: 10px 0;
+    font-size: 13px; text-align: center;
+  }
+  .status-success {
+    background: rgba(34,197,94,0.1); color: #4ade80;
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+  .status-error {
+    background: rgba(239,68,68,0.1); color: #f87171;
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+  .status-info {
+    background: rgba(99,102,241,0.1); color: #818cf8;
+    border: 1px solid rgba(99,102,241,0.2);
+  }
+  
+  .result-box {
+    background: #0d0d1f; border-radius: 8px;
+    padding: 10px; margin-top: 10px; font-size: 12px;
+    font-family: "SF Mono", "Monaco", monospace;
+    word-break: break-all; color: #a5b4fc;
+  }
+  
+  #stampHistory { max-height: 200px; overflow-y: auto; }
+  .stamp-item {
+    padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 12px; cursor: pointer;
+  }
+  .stamp-item:hover { background: rgba(255,255,255,0.03); }
+  .stamp-item .time { color: #888; }
+  .stamp-item .hash { color: #a5b4fc; word-break: break-all; }
+  
+  .no-wallet { text-align: center; padding: 20px; color: #888; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">S</div>
+  <div>
+    <div class="title">ContentStamp</div>
+    <div class="subtitle">链上内容存证</div>
+  </div>
+</div>
+
+<!-- 钱包状态 -->
+<div id="walletSection">
+  <div class="card" id="noWallet" style="display:none">
+    <div class="no-wallet">
+      <div style="font-size:24px;margin-bottom:8px">🦊</div>
+      <div style="font-size:13px;margin-bottom:12px">需要 MetaMask 连接</div>
+      <button class="btn btn-link" id="connectBtn">连接钱包</button>
+    </div>
+  </div>
+  
+  <div id="walletInfo" style="display:none">
+    <div class="card">
+      <div class="card-title">👛 已连接</div>
+      <div class="card-value" id="walletAddress">-</div>
+    </div>
+  </div>
+</div>
+
+<!-- 页面内容 -->
+<div class="card" id="pageInfo">
+  <div class="card-title">📄 当前页面</div>
+  <div class="card-value" id="pageTitle">加载中...</div>
+  <div class="card-value" style="font-size:11px;color:#666;margin-top:4px" id="pageUrl">-</div>
+</div>
+
+<!-- 操作按钮 -->
+<button class="btn btn-stamp" id="stampBtn" disabled>
+  🔏 存证当前页面
+</button>
+<button class="btn btn-link" id="verifyBtn" style="display:none">
+  🔍 去验证页面查看
+</button>
+
+<!-- 状态 -->
+<div id="statusArea"></div>
+
+<!-- 最近存证 -->
+<div style="margin-top:16px">
+  <div style="font-size:12px;color:#888;margin-bottom:8px">📋 本次存证记录</div>
+  <div class="card" id="stampHistory">
+    <div style="color:#666;font-size:12px;text-align:center;padding:10px">
+      暂无存证记录
+    </div>
+  </div>
+</div>
+
+<script src="ethers-6.13.min.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContentStamp - 内容存证验证</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #0a0a1a;
+    color: #e8e8f0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .container { max-width: 680px; width: 100%; }
+  
+  .hero {
+    text-align: center; padding: 40px 0 30px;
+  }
+  .hero h1 {
+    font-size: 28px; font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .hero p { color: #888; font-size: 14px; }
+  
+  /* 搜索框 */
+  .search-box {
+    display: flex; gap: 10px; margin-bottom: 24px;
+  }
+  .search-box input {
+    flex: 1; padding: 14px 18px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: #1a1a2e; color: #e8e8f0;
+    font-size: 14px; outline: none;
+    font-family: "SF Mono", "Monaco", monospace;
+  }
+  .search-box input:focus {
+    border-color: rgba(99,102,241,0.5);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  }
+  .search-box input::placeholder { color: #555; }
+  .search-box button {
+    padding: 14px 28px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: #fff; font-size: 14px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+  }
+  .search-box button:hover { opacity: 0.9; }
+  .search-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+  /* 验证结果 */
+  .card {
+    background: #1a1a2e; border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px; padding: 24px; margin-bottom: 16px;
+  }
+  
+  .verified-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .verified-badge.verified { background: rgba(34,197,94,0.1); color: #4ade80; }
+  .verified-badge.not-found { background: rgba(239,68,68,0.1); color: #f87171; }
+  
+  .result-row {
+    display: flex; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 14px;
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-label { color: #888; }
+  .result-value { color: #ccc; word-break: break-all; text-align: right; max-width: 60%; }
+  .result-value a { color: #818cf8; text-decoration: none; }
+  
+  /* 时间轴 */
+  .timeline {
+    position: relative; padding-left: 24px; margin-top: 8px;
+  }
+  .timeline::before {
+    content: ''; position: absolute; left: 8px; top: 4px; bottom: 4px;
+    width: 2px; background: rgba(99,102,241,0.3);
+  }
+  .timeline-item {
+    position: relative; padding: 8px 0;
+  }
+  .timeline-item::before {
+    content: ''; position: absolute; left: -18px; top: 12px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #6366f1; border: 2px solid #1a1a2e;
+  }
+  .timeline-time { font-size: 12px; color: #666; }
+  .timeline-text { font-size: 13px; color: #ccc; }
+  
+  /* 页脚 */
+  .footer {
+    text-align: center; padding: 40px 0; color: #555; font-size: 13px;
+  }
+  .footer a { color: #818cf8; text-decoration: none; }
+  
+  .feature-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-top: 24px;
+  }
+  .feature-item {
+    padding: 16px; border-radius: 12px;
+    background: rgba(99,102,241,0.05);
+    border: 1px solid rgba(99,102,241,0.1);
+    text-align: center;
+  }
+  .feature-item .icon { font-size: 24px; margin-bottom: 6px; }
+  .feature-item .title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .feature-item .desc { font-size: 12px; color: #888; }
+  
+  #loading { text-align: center; padding: 40px; color: #888; }
+  #result { display: none; }
+  #empty { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Hero -->
+  <div class="hero">
+    <h1>ContentStamp</h1>
+    <p>链上内容存证验证 — 不可篡改的创作时间戳</p>
+  </div>
+
+  <!-- 搜索 -->
+  <div class="search-box">
+    <input type="text" id="hashInput" placeholder="输入内容哈希或存证ID (如 0x... 或 #123)" />
+    <button id="searchBtn" onclick="doVerify()">验证</button>
+  </div>
+
+  <!-- 加载中 -->
+  <div id="loading">🔍 输入哈希开始验证...</div>
+
+  <!-- 验证结果 -->
+  <div id="result">
+    <div class="card">
+      <div id="badge"></div>
+      <div id="resultContent"></div>
+    </div>
+    
+    <!-- 链上信息 -->
+    <div class="card">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">⛓️ 链上信息</div>
+      <div id="chainInfo"></div>
+    </div>
+  </div>
+
+  <!-- 未找到 -->
+  <div id="empty">
+    <div class="card" style="text-align:center;padding:40px">
+      <div style="font-size:48px;margin-bottom:12px">🔍</div>
+      <div style="font-size:16px;color:#888;margin-bottom:8px">未找到存证记录</div>
+      <div style="font-size:13px;color:#666">
+        该内容哈希尚未被存证到链上<br>
+        <a href="#" onclick="document.getElementById('hashInput').focus()" style="color:#818cf8">换个哈希试试 →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 首页特性 -->
+  <div id="homeFeatures" class="feature-grid">
+    <div class="feature-item">
+      <div class="icon">🔏</div>
+      <div class="title">不可篡改</div>
+      <div class="desc">内容哈希上链后永久保存</div>
+    </div>
+    <div class="feature-item">
+      <div class="icon">⏰</div>
+      <div class="title">时间戳证明</div>
+      <div class="desc">链上区块时间不可伪造</div>
+    </div>
+    <div class="feature-item">
+      <div class="icon">🌐</div>
+      <div class="title">公开可查</div>
+      <div class="desc">任何人都能在浏览器上验证</div>
+    </div>
+    <div class="feature-item">
+      <div class="icon">⚡</div>
+      <div class="title">一键存证</div>
+      <div class="desc">安装 Chrome 插件秒存</div>
+    </div>
+  </div>
+
+  <!-- 页脚 -->
+  <div class="footer">
+    Powered by <a href="#">ContentStamp</a> on Base · 
+    <a href="#">安装 Chrome 插件</a>
+  </div>
+</div>
+
+<script src="ethers-6.13.min.js"></script>
+<script src="verify.js"></script>
+</body>
+</html>
