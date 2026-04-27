@@ -98,7 +98,7 @@
 
 本项目完全开源（MIT 协议）：
 
-🔗 GitHub: [github.com/yourname/contentstamp](https://github.com)
+🔗 GitHub: [github.com/1q2qq789/contentstamp](https://github.com)
 
 欢迎 Star、PR、Issue。
 

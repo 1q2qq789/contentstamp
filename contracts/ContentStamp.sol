@@ -6,9 +6,10 @@ pragma solidity ^0.8.20;
 contract ContentStamp {
     /// @notice 存证记录结构
     struct Stamp {
-        address author;       // 存证者地址
+        address author;       // 存证者地址（谁付 Gas 上链的）
         bytes32 contentHash;  // 内容 SHA256 哈希
         string metadataURI;   // 可选元数据（标题/URL/类型等）
+        string authorName;    // 创作者身份声明（姓名/笔名/URL），为空表示未声明
         uint256 timestamp;    // 上链时间戳
     }
 
@@ -30,9 +31,19 @@ contract ContentStamp {
         uint256 timestamp
     );
 
+    /// @notice 带创作者身份声明的存证事件
+    event ContentStampedWithAuthor(
+        uint256 indexed stampId,
+        address indexed author,
+        bytes32 indexed contentHash,
+        string authorName,
+        string metadataURI,
+        uint256 timestamp
+    );
+
     // ─── 核心功能 ───
 
-    /// @notice 存证内容
+    /// @notice 存证内容（基础版，不声明创作者身份）
     /// @param contentHash 内容的 SHA256 哈希
     /// @param metadataURI 可选元数据（标题、URL、作者等，建议JSON格式或纯文本）
     /// @return stampId 存证记录 ID
@@ -40,6 +51,29 @@ contract ContentStamp {
         external
         returns (uint256 stampId)
     {
+        return _stamp(contentHash, metadataURI, "");
+    }
+
+    /// @notice 存证内容并声明创作者身份
+    /// @param contentHash 内容的 SHA256 哈希
+    /// @param metadataURI 可选元数据
+    /// @param authorName 创作者身份声明（姓名/笔名/个人主页URL等）
+    /// @return stampId 存证记录 ID
+    function stampWithAuthor(
+        bytes32 contentHash,
+        string calldata metadataURI,
+        string calldata authorName
+    ) external returns (uint256 stampId) {
+        require(bytes(authorName).length > 0, "AuthorName cannot be empty");
+        return _stamp(contentHash, metadataURI, authorName);
+    }
+
+    /// @dev 内部存证逻辑
+    function _stamp(
+        bytes32 contentHash,
+        string memory metadataURI,
+        string memory authorName
+    ) internal returns (uint256 stampId) {
         require(contentHash != bytes32(0), "ContentHash cannot be empty");
 
         stampId = totalStamps;
@@ -47,13 +81,20 @@ contract ContentStamp {
             author: msg.sender,
             contentHash: contentHash,
             metadataURI: metadataURI,
+            authorName: authorName,
             timestamp: block.timestamp
         });
 
         totalStamps++;
         authorStampCount[msg.sender]++;
 
-        emit ContentStamped(stampId, msg.sender, contentHash, metadataURI, block.timestamp);
+        if (bytes(authorName).length > 0) {
+            emit ContentStampedWithAuthor(
+                stampId, msg.sender, contentHash, authorName, metadataURI, block.timestamp
+            );
+        } else {
+            emit ContentStamped(stampId, msg.sender, contentHash, metadataURI, block.timestamp);
+        }
     }
 
     /// @notice 批量存证（用于一次性存证多篇内容）
@@ -64,7 +105,23 @@ contract ContentStamp {
         require(contentHashes.length == metadataURIs.length, "Length mismatch");
         stampIds = new uint256[](contentHashes.length);
         for (uint256 i = 0; i < contentHashes.length; i++) {
-            stampIds[i] = this.stamp(contentHashes[i], metadataURIs[i]);
+            stampIds[i] = _stamp(contentHashes[i], metadataURIs[i], "");
+        }
+        return stampIds;
+    }
+
+    /// @notice 批量存证并声明创作者身份
+    function stampBatchWithAuthor(
+        bytes32[] calldata contentHashes,
+        string[] calldata metadataURIs,
+        string[] calldata authorNames
+    ) external returns (uint256[] memory stampIds) {
+        require(contentHashes.length == metadataURIs.length, "Length mismatch");
+        require(contentHashes.length == authorNames.length, "Length mismatch");
+        stampIds = new uint256[](contentHashes.length);
+        for (uint256 i = 0; i < contentHashes.length; i++) {
+            require(bytes(authorNames[i]).length > 0, "AuthorName cannot be empty");
+            stampIds[i] = _stamp(contentHashes[i], metadataURIs[i], authorNames[i]);
         }
         return stampIds;
     }
