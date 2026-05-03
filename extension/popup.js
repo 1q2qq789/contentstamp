@@ -18,6 +18,7 @@ const NETWORK = {
   blockExplorer: "https://sepolia.basescan.org",
 };
 const VERIFY_PAGE_URL = "https://contentstamp.vercel.app"; // 验证页地址
+const API_BASE_URL = "http://localhost:3000"; // 开发环境后端地址，上线后改为 Vercel 域名
 
 let provider = null;
 let signer = null;
@@ -212,7 +213,10 @@ async function doStamp() {
       } catch (e) {}
     }
 
-    // 5. 保存记录
+    // 5. 获取钱包地址
+    const walletAddr = await signer.getAddress();
+
+    // 6. 保存记录
     const record = {
       stampId,
       contentHash,
@@ -222,9 +226,13 @@ async function doStamp() {
       txHash: tx.hash,
       timestamp: Date.now(),
       blockNumber: receipt.blockNumber,
+      authorAddress: walletAddr,
     };
     saveStamp(record);
     addStampItem(record);
+
+    // 同步到后端 API
+    syncStampToBackend(record);
 
     showStatus(`✅ 存证成功! ID: #${stampId}`, "success");
     showResult(record);
@@ -258,6 +266,33 @@ function showResult(record) {
     <div style="color:#666;font-size:10px">🔍 Hash: ${record.hash.slice(0, 20)}...</div>
   `;
   statusArea.appendChild(div);
+}
+
+// ─── API 同步（将存证记录发送到后端）───
+async function syncStampToBackend(record) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/stamps`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content_hash: record.contentHash,
+        uri: record.url,
+        author_name: record.authorName || "",
+        author_address: record.authorAddress || "",
+        tx_hash: record.txHash,
+        block_number: record.blockNumber,
+        block_timestamp: new Date(record.timestamp).toISOString(),
+        network: "base-sepolia",
+      }),
+    });
+    if (!response.ok) {
+      console.warn("后同步到后端失败:", await response.text());
+    } else {
+      console.log("✅ 存证记录已同步到后端");
+    }
+  } catch (e) {
+    console.warn("后端同步失败（开发环境可能未启动）:", e.message);
+  }
 }
 
 // ─── 本地存储 ───
