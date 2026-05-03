@@ -18,7 +18,7 @@ const NETWORK = {
   blockExplorer: "https://sepolia.basescan.org",
 };
 const VERIFY_PAGE_URL = "https://contentstamp.vercel.app"; // 验证页地址
-const API_BASE_URL = "http://localhost:3000"; // 开发环境后端地址，上线后改为 Vercel 域名
+const API_BASE_URL = "https://contentstamp.vercel.app"; // 后端 API 地址
 
 let provider = null;
 let signer = null;
